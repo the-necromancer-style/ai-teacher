@@ -1,26 +1,45 @@
 <script lang="ts">
-	import { generateText } from '$lib/gemini'
+	import gemini from '$lib/gemini'
 
-	let replies: string[] = []
+	let messages: { role: 'user' | 'assistant'; content: string }[] = [
+		{ role: 'assistant', content: 'Hello! How can I assist you today?' }
+	]
+	let currentReply = ''
+
 	const handleSubmit = async (e: SubmitEvent) => {
 		e.preventDefault()
 		const form = e.currentTarget as HTMLFormElement
 		const formData = new FormData(form)
-		const textAreaValue = formData.get('message') as string
+		const prompt = formData.get('message') as string
 		form.reset()
-		replies = [...replies, await generateText(textAreaValue)]
+
+		messages.push({ role: 'user', content: prompt })
+		currentReply = ''
+
+		const geminiMessages = messages.map((msg) => ({
+			role: msg.role,
+			parts: [{ text: msg.content }] 
+		}))
+
+		const result = await gemini.generateContentStream({ contents: geminiMessages }) 
+		for await (const chunk of result.stream) {
+			const chunkText = chunk.text()
+			currentReply += chunkText
+			messages[messages.length - 1] = { role: 'assistant', content: currentReply }
+			messages = messages
+		}
 	}
 </script>
 
 <div class="flex h-screen flex-col">
 	<div class="flex-grow overflow-y-auto rounded-lg p-4 shadow-sm">
 		<div class="space-y-4">
-			<div class="self-start rounded-lg bg-blue-100 p-3 shadow">
-				<p class="text-md text-gray-800">Hello! How can I assist you today?</p>
-			</div>
-			{#each replies as reply}
-				<div class="self-start rounded-lg bg-blue-100 p-3 shadow">
-					<p class="text-md text-gray-800">{reply}</p>
+			{#each messages as message}
+				<div
+					class="self-start rounded-lg bg-blue-100 p-3 shadow"
+					class:bg-blue-200={message.role === 'user'}
+				>
+					<p class="text-md text-gray-800">{message.content}</p>
 				</div>
 			{/each}
 		</div>
