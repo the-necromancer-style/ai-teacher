@@ -1,6 +1,8 @@
 <script lang="ts">
-	import '../app.css';
-	let { children } = $props();
+	import '../app.css'
+	let { children } = $props()
 </script>
 
-{@render children()}
+<div class="h-screen w-full bg-[url(/bg.jpg)] bg-cover text-white">
+	{@render children()}
+</div>
